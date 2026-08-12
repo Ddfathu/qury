@@ -1,12 +1,8 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
-# Install dependencies, libmsquic, supervisor, dan cloudflared
+# Install dependencies utama, supervisor, dan cloudflared
 RUN apt-get update && \
-    apt-get install -y curl dnsutils iputils-ping supervisor && \
-    curl -sSL -o /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb && \
-    dpkg -i /tmp/packages-microsoft-prod.deb && rm /tmp/packages-microsoft-prod.deb && \
-    apt-get update && \
-    apt-get install -y libmsquic && \
+    apt-get install -y --no-install-recommends curl dnsutils iputils-ping supervisor ca-certificates && \
     curl -sSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && \
     dpkg -i /tmp/cloudflared.deb && rm /tmp/cloudflared.deb && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
@@ -16,7 +12,7 @@ RUN apt-get update && \
 WORKDIR /opt/technitium/dns
 COPY ./DnsServerApp/bin/Release/publish /opt/technitium/dns
 
-# Buat konfigurasi supervisord
+# Konfigurasi Supervisord untuk jalankan Technitium + Cloudflared
 RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'nodaemon=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
@@ -39,6 +35,6 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stderr_logfile=/dev/stderr' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stderr_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf
 
-EXPOSE 53/udp 53/tcp 853/udp 853/tcp 443/udp 443/tcp 80/tcp 8053/tcp 5380/tcp 53443/tcp 67/udp
+EXPOSE 53/udp 53/tcp 853/tcp 443/tcp 80/tcp 5380/tcp
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
