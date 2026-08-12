@@ -2,13 +2,25 @@ FROM technitium/dns-server:latest
 
 USER root
 
-# Install supervisor, cloudflared, dan dependency pendukung
+# Install supervisor, cloudflared, dan openssl
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends supervisor curl ca-certificates bash && \
+    apt-get install -y --no-install-recommends supervisor curl ca-certificates bash openssl && \
     curl -sSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && \
     dpkg -i /tmp/cloudflared.deb && rm /tmp/cloudflared.deb && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /etc/supervisor/conf.d
+
+# Generate Sertifikat Self-Signed .pfx Otomatis saat build (Password: 123456)
+RUN openssl req -x509 -newkey rsa:2048 -nodes \
+    -keyout /etc/dns/cert.key \
+    -out /etc/dns/cert.crt \
+    -days 3650 \
+    -subj "/CN=liatdns.dfat.my.id" && \
+    openssl pkcs12 -export \
+    -out /etc/dns/cert.pfx \
+    -inkey /etc/dns/cert.key \
+    -in /etc/dns/cert.crt \
+    -passout pass:123456
 
 # Bikin konfigurasi supervisor
 RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
