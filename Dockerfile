@@ -1,6 +1,15 @@
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
+WORKDIR /source
 
-# Install dependencies utama, supervisor, dan cloudflared
+# Copy seluruh source code repo dan publish
+COPY . .
+RUN dotnet publish DnsServerApp/DnsServerApp.csproj -c Release -o /app/publish
+
+# STAGE 2: Runtime Image + Cloudflared + Supervisor
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+WORKDIR /opt/technitium/dns
+
+# Install supervisor, cloudflared, dan tools pendukung
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl dnsutils iputils-ping supervisor ca-certificates && \
     curl -sSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && \
@@ -8,9 +17,8 @@ RUN apt-get update && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /etc/dns /etc/supervisor/conf.d
 
-# Copy file build aplikasi Technitium
-WORKDIR /opt/technitium/dns
-COPY ./DnsServerApp/bin/Release/publish /opt/technitium/dns
+# Copy hasil compile dari STAGE 1
+COPY --from=build-env /app/publish /opt/technitium/dns
 
 # Konfigurasi Supervisord untuk jalankan Technitium + Cloudflared
 RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
