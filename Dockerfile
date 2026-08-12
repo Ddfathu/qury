@@ -1,11 +1,13 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 # Install dependencies, libmsquic, supervisor, dan cloudflared
-ADD https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb /packages-microsoft-prod.deb
-RUN dpkg -i /packages-microsoft-prod.deb && rm /packages-microsoft-prod.deb && \
+RUN apt-get update && \
+    apt-get install -y curl dnsutils iputils-ping supervisor && \
+    curl -sSL -o /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb && \
+    dpkg -i /tmp/packages-microsoft-prod.deb && rm /tmp/packages-microsoft-prod.deb && \
     apt-get update && \
-    apt-get install -y libmsquic dnsutils iputils-ping supervisor curl && \
-    curl -L -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && \
+    apt-get install -y libmsquic && \
+    curl -sSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && \
     dpkg -i /tmp/cloudflared.deb && rm /tmp/cloudflared.deb && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /etc/dns /etc/supervisor/conf.d
